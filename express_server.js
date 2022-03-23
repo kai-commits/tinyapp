@@ -12,33 +12,72 @@ const urlDatabase = {
   "9sm5xK": "http://www.google.com"
 };
 
-app.get("/", (req, res) => {
-  res.send("Hello!");
-});
+const users = { 
+  "userRandomID": {
+    id: "userRandomID", 
+    email: "user@example.com", 
+    password: "purple-monkey-dinosaur"
+  },
+ "user2RandomID": {
+    id: "user2RandomID", 
+    email: "user2@example.com", 
+    password: "dishwasher-funk"
+  }
+};
 
-app.get("/urls.json", (req, res) => {
-  res.json(urlDatabase);
-});
+const generateRandomString = () => {
+  const lenOfStr = 6;
+  const chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  let result = '';
+  for (let i = 0; i < lenOfStr; i ++) {
+    result += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return result;
+};
 
-app.get("/hello", (req, res) => {
-  res.send("<html><body>Hello <b>World</b></body></html>\n");
-});
+const emailExists = (email) => {
+  for (const user in users) {
+    if (users[user].email === email) {
+      return true;
+    }
+  }
+  return false;
+};
 
 app.get("/urls", (req, res) => {
-  const templateVars = { username: req.cookies["username"], urls: urlDatabase };
+  const templateVars = { user_id: req.cookies["user_id"], urls: urlDatabase };
   res.render("urls_index", templateVars);
 });
 
-app.get("/urls/new", (req, res) => {
-  const templateVars = { username: req.cookies["username"] };
-  res.render("urls_new", templateVars);
-});
-
 app.post("/urls", (req, res) => {
-  let shortURL = generateRandomString();
+  const shortURL = generateRandomString();
   console.log(req.body);
   urlDatabase[shortURL] = req.body.longURL;
   res.redirect(`/urls/${shortURL}`);
+});
+
+app.get("/urls/new", (req, res) => {
+  const templateVars = { user_id: req.cookies["user_id"] };
+  res.render("urls_new", templateVars);
+});
+
+app.get("/register", (req, res) => {
+  const templateVars = { user_id: req.cookies["user_id"] };
+  res.render("register", templateVars);
+});
+
+app.post("/register", (req, res) => {
+  const randomID = generateRandomString();
+  const userEmail = req.body.email;
+  const userPassword = req.body.password;
+
+  if (userEmail === '' || userPassword === '' || emailExists(userEmail)) {
+    return res.sendStatus(400);
+  }
+
+  users[randomID] = { id: randomID, email: userEmail, password: userPassword };
+  res.cookie("user_id", users[randomID]);
+  res.redirect("/urls");
 });
 
 app.post("/login", (req, res) => {
@@ -71,16 +110,6 @@ app.post("/urls/:shortURL/update", (req, res) => {
   urlDatabase[req.params.shortURL] = req.body.newURL;
   res.redirect("/urls");
 });
-
-const generateRandomString = () => {
-  const lenOfStr = 6;
-  const chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  let result = '';
-  for (let i = 0; i < lenOfStr; i ++) {
-    result += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return result;
-}
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
