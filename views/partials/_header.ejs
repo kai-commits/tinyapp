@@ -4,11 +4,21 @@
     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
     </button>
-    <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+    <div class="collapse navbar-collapse justify-content-between" id="navbarNavAltMarkup" style="margin: .2em">
       <div class="navbar-nav">
         <a class="nav-item nav-link" href="/urls">My URLs</a>
         <a class="nav-item nav-link" href="/urls/new">Create New URL</a>
       </div>
+      <% if (username) { %>
+        <form class="form-inline my-2 my-lg-0" action="/logout" method="POST">
+          <label style="margin: .4em">Logged in as: <%= username %></label>
+          <button type="logout" class="btn btn-danger">Logout</button>
+      <% } else { %>
+        <form class="form-inline my-2 my-lg-0" action="/login" method="POST">
+          <input class="form-control mr-sm-2" type="text" name="username" placeholder="username">
+          <button type="login" class="btn btn-primary">Login</button>
+        </form>
+      <% } %>
     </div>
   </nav>
 </header>
