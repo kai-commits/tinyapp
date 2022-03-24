@@ -1,7 +1,7 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
-const { application } = require("express");
+const bcrypt = require("bcryptjs");
 const app = express();
 const PORT = 8080;
 
@@ -99,12 +99,12 @@ app.post("/register", (req, res) => {
   const randomID = generateRandomString();
   const userEmail = req.body.email;
   const userPassword = req.body.password;
+  const hashedPassword = bcrypt.hashSync(userPassword);
 
-  if (userEmail === '' || userPassword === '' || emailExists(userEmail)) {
-    return res.sendStatus(400);
-  }
+  if (userEmail === '' || userPassword === '') return res.send("Error: Input fields cannot be left blank").status(400);
+  if (emailExists(userEmail)) return res.send("Error: User with that email already exists").status(400);
 
-  users[randomID] = { id: randomID, email: userEmail, password: userPassword };
+  users[randomID] = { id: randomID, email: userEmail, password: hashedPassword };
   res.cookie("user_id", users[randomID]);
   res.redirect("/urls");
 });
@@ -123,14 +123,14 @@ app.post("/login", (req, res) => {
   
   if (emailExists(userEmail)) {
     for (const user in users) {
-      if (users[user].password === userPassword && users[user].email === userEmail) {
+      if (bcrypt.compareSync(userPassword, users[user].password) && users[user].email === userEmail) {
         res.cookie("user_id", users[user]);
         res.redirect("/urls");
         return;
       }
     }
   }
-  return res.sendStatus(403);
+  return res.send("Error: Invalid email or password").status(403);
 });
 
 app.post("/logout", (req, res) => {
