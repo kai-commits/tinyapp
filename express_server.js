@@ -2,6 +2,9 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const cookieSession = require("cookie-session");
 const bcrypt = require("bcryptjs");
+const { generateRandomString, urlsForUser, getUserByEmail } = require("./helpers");
+const { urlDatabase, users } = require("./databases");
+
 const app = express();
 const PORT = 8080;
 
@@ -12,60 +15,6 @@ app.use(cookieSession({
   maxAge: 24 * 60 * 60 * 1000,
 }));
 app.set("view engine", "ejs");
-
-const urlDatabase = {
-  "b2xVn2": {
-    longURL: "http://www.lighthouselabs.ca",
-    userID: "userRandomID"
-  },
-  "9sm5xK": {
-    longURL: "http://www.google.com",
-    userID: "userRandomID"
-  } 
-};
-
-const users = { 
-  "userRandomID": {
-    id: "userRandomID", 
-    email: "user@example.com", 
-    password: "$2a$10$G6baTP5jb8KclekGKqYcgOYhmV1jrQ7tOF9sWMiS4EJaC8NfsY3qS" // === 'test'
-  },
- "user2RandomID": {
-    id: "user2RandomID", 
-    email: "user2@example.com", 
-    password: "dishwasher-funk"
-  }
-};
-
-const generateRandomString = (length) => {
-  const chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  let result = '';
-  for (let i = 0; i < length; i ++) {
-    result += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return result;
-};
-
-const urlsForUser = (id) => {
-  const results = {};
-  const keys = Object.keys(urlDatabase);
-  for (const url of keys) {
-    if (urlDatabase[url].userID === id) {
-      results[url] = urlDatabase[url].longURL;
-    }
-  }
-  return results;
-};
-
-const getUserByEmail = (email) => {
-  const values = Object.values(users);
-  for (const user of values) {
-    if (user.email === email) {
-      return user;
-    }
-  }
-  return null;
-}
 
 app.get("/", (req, res) => {
   if (!req.session.user_id) {
@@ -79,7 +28,7 @@ app.get("/urls", (req, res) => {
     return res.send("Not logged in. Please sign in <a href='/login'>Here!</a>");
   }
   const user_id = req.session.user_id;
-  const urls = urlsForUser(user_id.id);
+  const urls = urlsForUser(user_id.id, urlDatabase);
   const templateVars = { user_id, urls };
 
   res.render("urls_index", templateVars);
@@ -125,7 +74,7 @@ app.post("/register", (req, res) => {
   if (!email || !password) {
   return res.send("Error: Input fields cannot be left blank. <a href='/register'>Please try again!</a>").status(400);
   }
-  if (getUserByEmail(email)) {
+  if (getUserByEmail(email, users)) {
     return res.send("Error: User with that email already exists. <a href='/register'>Please try again!</a>").status(400);
   }
 
@@ -148,10 +97,12 @@ app.post("/login", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
   
-  if (!getUserByEmail(email) || !bcrypt.compareSync(password, getUserByEmail(email).password) || getUserByEmail(email).email !== email) {
+  if (!getUserByEmail(email, users) ||
+    !bcrypt.compareSync(password, getUserByEmail(email, users).password) ||
+    getUserByEmail(email, users).email !== email) {
     return res.send("Error: Invalid credentials. <a href='/login'>Please try again!</a>").status(403);
   }
-  req.session.user_id = users[getUserByEmail(email).id];
+  req.session.user_id = users[getUserByEmail(email, users).id];
   res.redirect("/urls");
 });
 
